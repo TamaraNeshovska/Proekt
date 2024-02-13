@@ -1,6 +1,6 @@
 import requests
 def telegram_funkcija(dics):
-    telegram_auth_token = "6368401381:AAHfDYoZrdflss1Xgb66RgGc4DGNUwFy_i0"
+    telegram_auth_token = ""
     telegram_group_id = "statisticki_podatoci"
 
     # msg = "Imajte prekrasen den :) "
