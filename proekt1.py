@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from sqlite3 import connect
 import json
 from telegram import telegram_funkcija
+from pymongo import MongoClient
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 
@@ -46,7 +48,24 @@ def total_spent_by_age():
             lista1_r = list(sum(lista1,())) #list of tuples to list #lista od kolku potrosil toj user_id
             suma = suma + sum(lista1_r)
 
-        return suma/br_na_user_id       
+        return suma/br_na_user_id   
+
+    #pie chart 
+    grupi = ['18-24','25-30','31-36','37-47','47>'] 
+    sredna_vr = [funkcija(18,24), funkcija(25,30), funkcija(31,36), funkcija(37,47), funkcija(48,100)]  
+    plt.subplot(121)
+    plt.pie(sredna_vr, labels=grupi, autopct='%.2f%%')
+    plt.title("Sredna potrosuvacka na soodvetnite dadeni starosni grupi")
+    #bar graph 
+    positions = range(len(sredna_vr))
+    plt.subplot(122)
+    plt.bar(positions, sredna_vr, color = 'lightblue')
+    plt.xticks(positions, grupi)
+    plt.title('Sredna potrosuvacka na starosnite grupi')
+    plt.xlabel('Starosni grupi')
+    plt.ylabel('Sredna potrosuvacka')
+    plt.show()
+
     # send to Telegram 
     dics = {'18-24': funkcija(18,24), '25-30': funkcija(25,30), '31-36':funkcija(31,36), '37-47':funkcija(37,47), '47>':funkcija(48,100)}
     telegram_funkcija(dics)
@@ -57,9 +76,27 @@ def total_spent_by_age():
                    grupa_37_47 = funkcija(37,47),
                    grupa_pogolema_od_47 = funkcija(48,100) )
 
-@app.route('/write_to_mongodb',methods=['POST'])
+
+
+client = MongoClient('mongodb://localhost:27017/')
+db = client.user_db
+collection = db.userCollection
+
+@app.route('/write_to_mongodb',methods=['GET','POST'])
 def write_to_mongo():
-    return 'write to mongo'
+
+    data = request.get_json()
+    if collection.find_one({'user_id': data['user_id']}):
+        return json.dumps({'Error': f'Postoi korisnik so user_id {data["user_id"]} '}), 400
+    else:
+        if data['total_spending'] >= 2000:
+            result = collection.insert_one(data)
+            if result.inserted_id:
+                return json.dumps({'Success': 'Podatocite se uspesno zapisani'}), 201
+            else:
+                return json.dumps({'Error': 'Ne se zapisaa podatocite'}), 500
+        else:
+            return json.dumps({'Bad Request': 'Vkupnata potrosuvacka mora da e pogolema od 2000'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
